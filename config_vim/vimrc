@@ -55,8 +55,8 @@ if has("autocmd")
 
     " When entering a new window, match ExtraWhitespace with 2match, and Tabs with
     " 3match. When leaving a window, clearing all matches (version > 702).
-    autocmd BufWinEnter * 2match ExtraWhitespace /\s\+\%#\@<!$/
-    autocmd BufWinEnter * 3match Tabs /\t/
+    autocmd BufWinEnter * 2match ExtraWhitespace /\t\s\+\%#\@<!$/
+    "autocmd BufWinEnter * 3match Tabs /\t/ " Not working well in vim 8.0
     autocmd BufWinLeave * call clearmatches()
 
     " Restore cursor position
