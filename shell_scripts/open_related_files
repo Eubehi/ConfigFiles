@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# CONFIGURING BASH VARIABLES
+IFS=$'\t\n';
+LANG=en_GB.utf-8;
+
+# GLOBAL VARIABLES
+DIRECTORY_TO_SEARCH='.';
+PATTERN_TO_SEARCH="";
+VIM_PATTERN_TO_SEARCH="";
+VIM_SEARCH_OPTIONS="";
+FIND_NAME='*';
+GREP_OPTS='';
+SHOW_VAR=false;
+GVIM_OPTS='-p';
+
+################################################################################
+# Print the help of the script
+# Globals:
+#   None
+# Arguments:
+#   $1 : if empty or negative, script is not exited; else this script is exited
+#        with the status given by $1.
+#   $2 : Echo this message before the help if not empty.
+# Returns:
+#   Print the help to stdout. If the first argument is empty or negative, script
+#   is not exited.
+################################################################################
+function usage::main {
+[[ $2 != "" ]] && echo "$2";
+cat << EOF
+$0 [OPTIONS]*
+
+[OPTIONS]
+    [-h | --help]       Print this help and exit immediatly
+    [-p | --pattern]    The pattern to search in files (see --find-name option)
+    [-vp| --vpattern]   The pattern to search in vim
+    [-d | --dir]        The directory ot search
+    [-f | --find-name]  The files name (by default, set to '*')
+    [-g | --grep-opt]   The grep options to consider (by default, set to '')
+    [-v | --var]        Display the variables
+    [-R | --read-only]  Open files in read only mode
+EOF
+[[ $1 != "" && $1 -ge 0 ]] && exit $1;
+}
+
+################################################################################
+#                           Treating arguments                                 #
+################################################################################
+if [[ $# -eq 0 ]] ; then
+    echo "ERROR : expected at least 1 argument.";
+    usage::main;
+    exit 1;
+fi
+
+while [[ $1 != "" ]] ; do
+    case $1 in
+        -d | --dir      ) [[ $2 != "" ]] && DIRECTORY_TO_SEARCH=$2 ; shift ;;
+        -p | --pattern  ) PATTERN_TO_SEARCH=$2 ; shift ;;
+        -vp| --vpattern ) VIM_PATTERN_TO_SEARCH=$2 ; shift ;;
+        -f | --find-name) FIND_NAME=$2 ; shift ;;
+        -g | --grep-opt ) GREP_OPTS=$2 ; shift ;;
+        -v | --var      ) SHOW_VAR=true ;;
+        -R | --read-only) GVIM_OPTS+="R" ;;
+        -h | --help     ) usage::main 0 ;;
+        *               ) usage::main 2 "ERROR : unknown option '$1'." ;;
+    esac
+    shift;
+done
+
+[[ $PATTERN_TO_SEARCH == "" ]] && echo "ERROR : PATTERN_TO_SEARCH has not been set" && exit 3;
+[[ ! -d $DIRECTORY_TO_SEARCH ]] && echo "ERROR : DIRECTORY_TO_SEARCH ('$DIRECTORY_TO_SEARCH') is not a valid directory" && exit 4;
+[[ $VIM_PATTERN_TO_SEARCH == "" ]] && VIM_PATTERN_TO_SEARCH=$(echo "$PATTERN_TO_SEARCH" | sed -r 's,\\b(.*)\\b,\\<\1\\>,g;s,/,\\/,g') ;
+
+if $SHOW_VAR ; then
+    echo "DIRECTORY_TO_SEARCH='$DIRECTORY_TO_SEARCH'";
+    echo "PATTERN_TO_SEARCH='$PATTERN_TO_SEARCH'";
+    echo "VIM_PATTERN_TO_SEARCH='$VIM_PATTERN_TO_SEARCH'";
+    echo "VIM_SEARCH_OPTIONS='$VIM_SEARCH_OPTIONS'";
+    echo "FIND_NAME='$FIND_NAME'";
+    echo "GREP_OPTS='$GREP_OPTS'";
+    echo "GVIM_OPTS='$GVIM_OPTS'";
+    echo 'MATCHING_FILES=($(find $DIRECTORY_TO_SEARCH -type f -name "$FIND_NAME" -exec grep -l$(echo $GREP_OPTS) "$PATTERN_TO_SEARCH" {} \; | sort))';
+fi
+
+MATCHING_FILES=($(find $DIRECTORY_TO_SEARCH -type f -name "$FIND_NAME" -exec grep -l$(echo $GREP_OPTS) "$PATTERN_TO_SEARCH" {} \; | sort));
+if [[ ${#MATCHING_FILES[@]} -eq 0 ]] ; then
+    echo "No files found mathing pattern '$PATTERN_TO_SEARCH'";
+    exit 3;
+fi
+
+[[ $GREP_OPTS =~ i ]] && VIM_SEARCH_OPTIONS='\\c';
+$SHOW_VAR && echo 'gvim $GVIM_OPTS +/"${VIM_PATTERN_TO_SEARCH}${VIM_SEARCH_OPTIONS}" ${MATCHING_FILES[@]} -c "grep -n$GREP_OPTS '"'$(echo ${VIM_PATTERN_TO_SEARCH} | sed 's,\\|,\\\\\\\\|,')'"' $(echo ${MATCHING_FILES[@]})" -c '"'cw' -c 'wincmd T' -c 'tabm 0'";
+gvim $GVIM_OPTS +/"${VIM_PATTERN_TO_SEARCH}${VIM_SEARCH_OPTIONS}" ${MATCHING_FILES[@]} -c "grep -n$GREP_OPTS '$(echo ${VIM_PATTERN_TO_SEARCH} | sed 's,\\|,\\\\|,g')' $(echo ${MATCHING_FILES[@]})" -c 'cw' -c 'wincmd T' -c 'tabm 0';
+

@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# CONFIGURING BASH VARIABLES
+IFS=$'\t\n'
+LANG=en_GB.utf-8
+
+# GLOBAL_READONLY VARIABLES
+readonly SCRIPT_LOC=${BASH_SOURCE[0]}
+readonly YEAR_WEEK_NUMBER=$(date +%Y_W%W)
+readonly YYYY_MM_DD=$(date +%Y_%m_%d)
+readonly NANO=$(date +%N)
+readonly TAR_PREFIX='BACKUP_'
+
+readonly BASE_DIR="$HOME"
+# Next paths are relative to $BASE_DIR
+readonly FILES_TO_SAVE=(.vimrc .gvimrc .bashrc .bashrc_ps1 .bash_logout .bash_aliases .profile liens_utiles.yaml .gitconfig)
+readonly DIR_TO_SAVE=(bin/ .vim/)
+readonly EXCLUSION=("*swp")
+
+# GLOBAL VARIABLES
+TAR_NAME=${TAR_PREFIX}${YEAR_WEEK_NUMBER}
+
+################################################################################
+# Print the help of the script
+# Globals:
+#   None
+# Arguments:
+#   None
+# Returns:
+#   Print the help to stdout
+################################################################################
+function usage {
+cat << EOF
+$0 [OPTIONS]*
+
+[OPTIONS]
+    [-h | --help]     Print this help and exit immediatly
+    [-s | --show]     Show the backup configuration
+    [-w | --week]     Name the tar file '${TAR_PREFIX}${YEAR_WEEK_NUMBER}'
+    [-d | --date]     Name the tar file '${TAR_PREFIX}${YYYY_MM_DD}'
+EOF
+}
+
+################################################################################
+# Print the current configuration to the STD_OUT.
+# Globals:
+#   DIR_TO_SAVE
+#   FILES_TO_SAVE
+#   EXCLUSION
+# Arguments:
+#   None
+# Returns:
+#   Print the current configuration to the STD_OUT.
+################################################################################
+function show_config {
+    echo "Directories saved :"
+    for index in ${!DIR_TO_SAVE[@]} ; do
+        echo "   - ${DIR_TO_SAVE[$index]}"
+    done
+    echo "Files saved :"
+    for index in ${!FILES_TO_SAVE[@]} ; do
+        echo "   - ${FILES_TO_SAVE[$index]}"
+    done
+    echo "Patterns exlcluded :"
+    for index in ${!EXCLUSION[@]} ; do
+        echo "   - ${EXCLUSION[$index]}"
+    done
+}
+
+################################################################################
+# Create a TAR file with the given options.
+# Globals:
+#   BASE_DIR
+#   DIR_TO_SAVE
+#   FILES_TO_SAVE
+#   EXCLUSION
+# Arguments:
+#   None
+# Returns:
+#   Print the executed command to the STD_OUT.
+################################################################################
+function create_tar {
+    local directories=""
+    for index in ${!DIR_TO_SAVE[@]} ; do
+        directories+="${DIR_TO_SAVE[$index]} "
+    done
+    local files=""
+    for index in ${!FILES_TO_SAVE[@]} ; do
+        files+="${FILES_TO_SAVE[$index]} "
+    done
+    local excluded=""
+    for index in ${!EXCLUSION[@]} ; do
+        excluded+="--exclude=${EXCLUSION[$index]} "
+    done
+    local command="tar -C $BASE_DIR --dereference -cvf $TAR_NAME $directories $files $excluded"
+    echo "$command"
+    eval "$command"
+
+    # Saving this script if it is not part of the tar file
+    # This code does not take into account correctly symbolic links
+    local to_add=true
+    for ft in $(tar -tf $TAR_NAME) ; do
+        if [[ $(readlink -m "$BASE_DIR/$ft") == $SCRIPT_LOC ]] ; then
+            to_add=false
+            break
+        fi
+    done
+    if $to_add ; then
+        local _tmp_file=$(basename $SCRIPT_LOC)_$NANO
+        cp $SCRIPT_LOC $_tmp_file
+        tar rvf $TAR_NAME $_tmp_file
+        rm $_tmp_file
+    fi
+}
+
+################################################################################
+#                           Treating arguments                                 #
+################################################################################
+while [[ $1 != "" ]] ; do
+    case $1 in
+        -h | --help) usage ; exit 0 ;;
+        -s | --show) show_config ; exit 0 ;;
+        -w | --week) TAR_NAME=${TAR_PREFIX}${YEAR_WEEK_NUMBER} ;;
+        -d | --date) TAR_NAME=${TAR_PREFIX}${YYYY_MM_DD} ;;
+        *          ) usage ; exit 2 ;;
+    esac
+    shift
+done
+
+create_tar
+exit 0
+
