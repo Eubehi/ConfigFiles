@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# CONFIGURING BASH VARIABLES
+IFS=$'\t\n ';
+LANG=en_GB.utf-8;
+
+# GLOBAL_READONLY VARIABLES
+readonly SCRIPT_LOC=${BASH_SOURCE[0]};
+readonly GNOME_MAIN_CMD="gnome-terminal --geometry 170x50+0+0 --maximize"
+
+# GLOBAL VARIABLES
+
+################################################################################
+# Print the help of the script
+################################################################################
+function usage::main {
+cat << EOF
+$0 [OPTIONS]*
+
+[OPTIONS]
+    [-h | --help]     Print this help and exit immediatly
+    [LYNE|lyne]       Start the LYNE working environment
+    [CONFIG|config]   Start the configuration working environment
+EOF
+}
+
+################################################################################
+# Start the LYNE working environment
+################################################################################
+function start_lyne {
+    $GNOME_MAIN_CMD\
+        --tab-with-profile="Eubehi" --title="LYNE-Git"      --working-directory=/home/eubehi/INFORMATIC/Projects/LyneSolver/ \
+        --tab-with-profile="Eubehi" --title="LYNE-Dotfiles" --working-directory=/home/eubehi/INFORMATIC/Projects/LyneSolver/solver/dot_files \
+        --tab-with-profile="Eubehi" --title="LYNE-Eclipse"  --working-directory=/home/eubehi/INFORMATIC/Softwares/LyneSolver_eclipse/ &>/dev/null
+}
+
+################################################################################
+# Start the configuration working environment
+################################################################################
+function start_config {
+    $GNOME_MAIN_CMD\
+        --tab-with-profile="Eubehi" --title="CONFIG-Git"        --working-directory=/home/eubehi/INFORMATIC/Projects/ConfigFiles/ \
+        --tab-with-profile="Eubehi" --title="CONFIG-Bash"       --working-directory=/home/eubehi/INFORMATIC/Projects/ConfigFiles/config_bash/ \
+        --tab-with-profile="Eubehi" --title="CONFIG-Vim"        --working-directory=/home/eubehi/INFORMATIC/Projects/ConfigFiles/config_vim/ \
+        --tab-with-profile="Eubehi" --title="CONFIG-Scripts"    --working-directory=/home/eubehi/INFORMATIC/Projects/ConfigFiles/shell_scripts/ &>/dev/null
+}
+
+################################################################################
+#                           Treating arguments                                 #
+################################################################################
+if [[ $# -eq 0 ]] ; then
+    return; # By doing so, this script can be sourced.
+    echo "ERROR : expected at least 1 argument.";
+    usage::main;
+    exit 1;
+fi
+
+while [[ $1 != "" ]] ; do
+    case $1 in
+        -h | --help             ) usage::main ; exit 0 ;;
+        [Ll][Yy][Nn][Ee]        ) start_lyne ;;
+        [Cc][Oo][Nn][Ff][Ii][Gg]) start_config ;;
+        *                       ) usage::main ; exit 2 ;;
+    esac
+    shift;
+done
+
