@@ -1,0 +1,86 @@
+# Configuring variables for PS1
+_my_date='\D{%d %b-%H:%M:%S}'
+_my_user='\u@\h'
+_my_path='\w'
+
+# No more style
+    __END='\[\e[0m\]'
+# Frontground colors
+    __RED='\[\e[0;31m\]' # Red
+   __CYAN='\[\e[0;36m\]' # Cyan
+  __GREEN='\[\e[0;32m\]' # Green
+ __YELLOW='\[\e[0;93m\]' # Light Yellow
+__DYELLOW='\[\e[2;33m\]' # Dim + Light Yellow
+# Background colors
+_B_GRE='\[\e[0;92m\]' # Green
+_B_RED='\[\e[0;91m\]' # Red
+# Configurations
+__RCOK=$__GREEN
+__RCER=$__RED
+__DATE=$__DYELLOW
+__USER=$__GREEN
+__PATH=$__CYAN
+__BRCH=$__RED
+__REMO=$__YELLOW
+
+function parse_git_branch {
+  git rev-parse --git-dir &> /dev/null
+  if [[ $? -ne 0 ]] ; then return; fi
+  # The following works only if locale is set to english
+  local git_status="$(git status 2> /dev/null)"
+  local head_detached="^HEAD detached at ([a-f0-9]*)"
+  local branch_pattern="^On branch ([^${IFS}]*)"
+  local remote_pattern="Your branch is (.*) '([^']*)' by ([0-9]*) commit."
+  local diverge_pattern1="Your branch and '(.*)' have diverged,"
+  local diverge_pattern2="and have ([0-9]*) and ([0-9]*) different commits each, respectively."
+  
+  if [[ ! ${git_status} =~ "working tree clean" ]]; then
+    local state="⚡" # ⚡ Depending on the font, this character is not really readable
+  fi
+  if [[ ${git_status} =~ ${remote_pattern} ]]; then
+    local remote=${BASH_REMATCH[2]}
+    local nb=${BASH_REMATCH[3]};
+    if [[ ${BASH_REMATCH[1]} == "ahead of" ]]; then
+      local remote_status="↑$nb"
+    else
+      local remote_status="↓$nb"
+    fi
+  fi
+  if [[ ${git_status} =~ ${diverge_pattern1} ]]; then
+    local remote=${BASH_REMATCH[1]}
+    # ↕ : Initially, this character was used
+    [[ ${git_status} =~ ${diverge_pattern2} ]] && \
+      local remote_status="↑${BASH_REMATCH[1]}↓${BASH_REMATCH[2]}"
+  fi
+  if [[ ${git_status} =~ ${branch_pattern} ]]; then
+    local branch=${BASH_REMATCH[1]}
+    if [[ ${remote} = "" ]] ; then # managing repo with no remote
+      if [[ ${state} = "" ]] ; then # when there is no modification
+        echo " {${__BRCH}${branch}${__END}}"
+      else
+        echo " {${__BRCH}${branch}${__END}}${state}"
+      fi
+    else # main case
+      echo " {${__BRCH}${branch}${__END} ${__REMO}${remote_status}${__END} ${__BRCH}${remote}${__END}}${state}"
+    fi
+  elif [[ ${git_status} =~ ${head_detached} ]] ; then
+    echo " {${__BRCH}${BASH_REMATCH[1]}${__END}}${state}"
+  fi
+}
+
+
+function prompt_func {
+  local __RC=$?
+  if [[ $__RC -eq 0 ]] ; then
+    local __RETURN_CODE="${__RCOK}0  ${__END}"
+  else
+    local __RETURN_CODE="${__RCER}$(printf "%-3d" $__RC)${__END}"
+  fi
+  local __MY_DATE="${__DATE}[${_my_date}]${__END}"
+  local __MY_USER="${__USER}${_my_user}${__END}"
+  local __MY_PATH="${__PATH}${_my_path}${__END}"
+  PS1="${__RETURN_CODE}${__MY_DATE}${__MY_USER}:${__MY_PATH}$(parse_git_branch)\\n> ";
+}
+
+PROMPT_COMMAND=prompt_func
+

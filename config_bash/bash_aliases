@@ -1,1 +1,10 @@
-alias ll='ls -al'
+# Aliases : ls
+alias ll="ls -alh"
+alias l="ls -lh"
+# Aliases : moving current directory
+alias SOFTWARES="cd /home/eubehi/INFORMATIC/Softwares/"
+alias PROJECTS="cd /home/eubehi/INFORMATIC/Projects/"
+# Aliases : sudo
+alias please="sudo"
+alias PLEASE="sudo"
+
