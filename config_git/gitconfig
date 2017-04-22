@@ -1,0 +1,8 @@
+[user]
+	name = Eubehi
+	email = Eubehi@users.noreply.github.com
+[alias]
+	st = status -sbu
+	logff1 = log --follow --format=oneline
+	logr = log --graph --format=oneline --abbrev-commit --decorate
+	logra = log --graph --format=oneline --abbrev-commit --decorate --all
