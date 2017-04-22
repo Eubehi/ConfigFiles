@@ -15,7 +15,7 @@ set noerrorbells visualbell t_vb=
 autocmd GUIEnter * set visualbell t_vb=
 "set nobackup        " do not keep a backup file
 set number          " show line numbers
-set ignorecase      " ignore case when searching 
+set ignorecase      " ignore case when searching
 "set noignorecase   " don't ignore case
 set title           " show title in console title bar
 set ttyfast         " smoother changes
@@ -27,34 +27,38 @@ set nostartofline   " don't jump to first character when paging
 set whichwrap=b,s,h,l,<,>,[,]   " move freely between files
 "set viminfo='20,<50,s10,h
 
-set autoindent     " always set autoindenting on
-set smartindent        " smart indent
-"set cindent            " cindent
+set autoindent      " always set autoindenting on
+set smartindent     " smart indent
+"set cindent         " cindent
 "set noautoindent
 "set nosmartindent
 set nocindent
+set switchbuf+=usetab,newtab
 
-colorscheme desert
+colorscheme default
 "set autowrite      " auto saves changes when quitting and swiching buffer
 set expandtab       " tabs are converted to spaces, use only when required
 "set sm             " show matching braces, somewhat annoying...
 "set nowrap         " don't wrap lines
 
 syntax on           " syntax highlighing
-"if has("gui_running")
-    " See ~/.gvimrc
-"    set guifont=Monospace\ 10  " use this font 
-"    set lines=50       " height = 50 lines
-"    set columns=100        " width = 100 columns
-"    set background=light   " adapt colors for background
-"    set selectmode=mouse,key,cmd
-"    set keymodel=
-"else
-    " colorscheme elflord    " use this color scheme
-"    set background=dark        " adapt colors for background
-"endif
+filetype plugin on  " enable filetype detection, plus loading of filetype plugins
 
 if has("autocmd")
+    " Show trailing whitespace in red.
+    highlight ExtraWhitespace ctermbg=red guibg=red
+    " Show tabs in dark green.
+    highlight Tabs ctermbg=darkgreen guibg=darkgreen
+    " Keeping configuration even when changing colorscheme.
+    autocmd ColorScheme * highlight ExtraWhitespace ctermbg=red guibg=red
+    autocmd ColorScheme * highlight Tabs ctermbg=darkgreen guibg=darkgreen
+
+    " When entering a new window, match ExtraWhitespace with 2match, and Tabs with
+    " 3match. When leaving a window, clearing all matches (version > 702).
+    autocmd BufWinEnter * 2match ExtraWhitespace /\s\+\%#\@<!$/
+    autocmd BufWinEnter * 3match Tabs /\t/
+    autocmd BufWinLeave * call clearmatches()
+
     " Restore cursor position
     au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
 
@@ -65,22 +69,18 @@ if has("autocmd")
 
     " When using mutt, text width=72
     au FileType mail,tex set textwidth=72
-    "au FileType cpp,c,java,sh,pl,php,phtml,asp  set autoindent
-    au FileType cpp,c,java,bash,sh,pl,php,phtml,py,asp,xml,javascript  set smartindent
     nnoremap <C-p> :set invpaste paste?<CR>
     set pastetoggle=<C-p>
     set showmode
-    "au FileType cpp,c,java,sh,pl,php,phtml,asp  set cindent
-    "au BufRead mutt*[0-9] set tw=72
-
-    " Automatically chmod +x Shell and Perl scripts
-    "au BufWritePost   *.sh             !chmod +x %
-    "au BufWritePost   *.pl             !chmod +x %
 
     " File formats
     au BufNewFile,BufRead  *.phtml  set syntax=php
     au BufNewFile,BufRead  *.pls    set syntax=dosini
     au BufNewFile,BufRead  modprobe.conf    set syntax=modconf
+
+    " on C file, man only search for sections 2 and 3
+    autocmd BufNewFile,BufRead *.[ch] setlocal kp=manterm\ 2:3
+    autocmd BufNewFile,BufRead *.cc setlocal kp=manterm\ 2:3
 
     " Ctrl+X O
     autocmd FileType python set omnifunc=pythoncomplete#Complete
@@ -95,44 +95,79 @@ if has("autocmd")
     autocmd Filetype html,xml,xsl source ~/.vim/closetag.vim
 endif
 
+" configure browser for haskell_doc.vim
+let g:haddock_browser = "/usr/bin/firefox"
+
+set colorcolumn=80
+highlight ColorColumn ctermbg=0 guibg=black
+
 " Keyboard mappings
-map <F1> :previous<CR>  " map F1 to open previous buffer
-map <F2> :next<CR>      " map F2 to open next buffer
-map <silent> <C-N> :silent noh<CR> " turn off highlighted search
-map ,v :sp ~/.vimrc<cr> " edit my .vimrc file in a split
-map ,e :e ~/.vimrc<cr>      " edit my .vimrc file
-map ,u :source ~/.vimrc<cr> " update the system settings from my vimrc file
-"----- write out html file
-map ,h :source $VIM/vim70/syntax/2html.vim<cr>:w<cr>:clo<cr>
+vnoremap <Leader>s  :s/\<<C-r><C-w>\>/
+nnoremap <Leader>s  :%s/\<<C-r><C-w>\>//g
+nnoremap <Leader>g  :g /<C-r><C-w>/
+nnoremap <Leader>h  :grep "\b<C-r><C-w>\b" *
+nnoremap <Leader>f  :lgrep "\b<C-r><C-w>\b" %
+ noremap <C-Up>     {
+ noremap <C-Down>   }
 
 
-" Common command line typos
-"cmap W w
-"cmap Q q
+" Special command
+command! YYMD   :call GetTime("%Y/%m/%d")
+command! DMYY   :call GetTime("%d/%m/%Y")
+command! LU     :tab sview +:59go $HOME/liens_utiles.yaml
+command! BASH   :set syntax=sh
+command! TASKS  :exe "lgrep -nE '\\\b(TODO\\\|FIXME\\\|XXX)\\\b' %" | noh | lwindow
+command! BUGS   :exe "lgrep -nE '\\\bBUG\\\#[0-9]+?' %" | noh | lwindow
+command! NI     :call append(line("."), "! Do_you_demand_a_shrubbery_question_tag")
+command! TC     :call append(line("."), "£ tempo_cycles(1); £")
+command! SOURCE :source $HOME/.vimrc | source $HOME/.gvimrc
+command! -nargs=* ArgGrep :call setqflist([]) | exe "argdo grepadd! <args> %"    | cw | wincmd T
+command! -nargs=* BufGrep :call setqflist([]) | call BufDo(" grepadd! <args> %") | cw | wincmd T
+command! -nargs=* TabGrep :call setqflist([]) | call TabDo(" grepadd! <args> %") | cw | wincmd T
+command! -nargs=* WinGrep :call setqflist([]) | call WinDo("lgrepadd! <args> %") | lw
 
-" Keyboard mapping for numeric keypad
-imap <Esc>OM <c-m>
- map <Esc>OM <c-m>
-imap <Esc>OP <nop>
- map <Esc>OP <nop>
-imap <Esc>OQ /
- map <Esc>OQ /
-imap <Esc>OR *
- map <Esc>OR *
-imap <Esc>OS -
- map <Esc>OS -
+" Functions
+" Like windo but restore the current window.
+function! WinDo(command)
+  let currwin=winnr()
+  let curaltwin=winnr("#")
+  execute 'windo ' . a:command
+  " restore previous/alt window
+  execute curaltwin . 'wincmd w'
+  " restore current window
+  execute currwin . 'wincmd w'
+endfunction
 
-imap <Esc>Ol +
-imap <Esc>Om -
-imap <Esc>On ,
-imap <Esc>Op 0
-imap <Esc>Oq 1
-imap <Esc>Or 2
-imap <Esc>Os 3
-imap <Esc>Ot 4
-imap <Esc>Ou 5
-imap <Esc>Ov 6
-imap <Esc>Ow 7
-imap <Esc>Ox 8
-imap <Esc>Oy 9
-imap <Esc>Oz 0
+" Like bufdo but restore the current buffer.
+function! BufDo(command)
+  let currBuff = bufnr("%")
+  execute 'bufdo ' . a:command
+  execute 'buffer ' . currBuff
+endfunction
+
+" Like tabdo but restore the current tab.
+function! TabDo(command)
+  let currTab = tabpagenr()
+  execute 'tabdo ' . a:command
+  execute 'tabn ' . currTab
+endfunction
+
+" Create a header for a bash function
+function! BashFunctionHeader()
+  call append(line(".") + 0, '################################################################################')
+  call append(line(".") + 1, '# TODO')
+  call append(line(".") + 2, '# Globals:')
+  call append(line(".") + 3, '#   TODO')
+  call append(line(".") + 4, '# Arguments:')
+  call append(line(".") + 5, '#   TODO')
+  call append(line(".") + 6, '# Returns:')
+  call append(line(".") + 7, '#   TODO')
+  call append(line(".") + 8, '################################################################################')
+endfunction
+
+" Append the time using the given format
+function! GetTime(format)
+  let today = strftime(a:format)
+  execute ("normal a" . today)
+endfunction
+
